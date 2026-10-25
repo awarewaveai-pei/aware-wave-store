@@ -1,0 +1,24 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  build-zip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build installable plugin zip (forward-slash, Linux zip)
+        run: |
+          SLUG=aware-wave-store
+          mkdir -p build/$SLUG
+          cp $SLUG.php build/$SLUG/
+          cp -r includes build/$SLUG/
+          [ -f README.md ] && cp README.md build/$SLUG/ || true
+          cd build && zip -rq ../$SLUG-${GITHUB_REF_NAME}.zip $SLUG
+      - name: Create GitHub release with the installable zip
+        uses: softprops/action-gh-release@v2
+        with:
+          files: aware-wave-store-*.zip
+          generate_release_notes: true

@@ -1,0 +1,26 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer
+      - name: Skip until the first sync from Work brings composer.json
+        id: ready
+        run: '[ -f composer.json ] && echo go=1 >> "$GITHUB_OUTPUT" || echo "no composer.json yet"'
+      - if: steps.ready.outputs.go == '1'
+        run: composer install --no-interaction --prefer-dist
+      - if: steps.ready.outputs.go == '1'
+        name: Unit tests
+        run: vendor/bin/phpunit
+      - if: steps.ready.outputs.go == '1'
+        name: Security gate (no shell/eval in plugin code)
+        run: |
+          if grep -rEn "shell_exec|passthru[[:space:]]*\(|proc_open[[:space:]]*\(|popen[[:space:]]*\(|[^a-zA-Z_]eval[[:space:]]*\(" includes/ ; then
+            echo "Forbidden dangerous call found in includes/"; exit 1
+          fi
+          echo "security gate OK"
